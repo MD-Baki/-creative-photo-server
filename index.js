@@ -1,7 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const {
+    MongoClient,
+    ServerApiVersion,
+    ObjectId,
+    Timestamp,
+} = require("mongodb");
+const { timeStamp } = require("./utils/timeStamp");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -15,6 +21,21 @@ const client = new MongoClient(uri, {
     useUnifiedTopology: true,
     serverApi: ServerApiVersion.v1,
 });
+
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        res.status(401).send({ message: "unauthorized access" });
+    }
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+        if (err) {
+            res.status(403).send({ message: "forbidden access" });
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
 
 async function run() {
     try {
@@ -35,7 +56,10 @@ async function run() {
 
         app.post("/service", async (req, res) => {
             const service = req.body;
-            const result = await serviceCollection.insertOne(service);
+            const result = await serviceCollection.insertOne({
+                ...service,
+                createdAt: timeStamp(),
+            });
             res.send(result);
         });
 
@@ -61,27 +85,35 @@ async function run() {
 
         app.post("/reviews", async (req, res) => {
             const review = req.body;
-            const result = await reviewCollection.insertOne(review);
+            const result = await reviewCollection.insertOne({
+                ...review,
+                createdAt: timeStamp(),
+            });
             res.send(result);
         });
 
         app.get("/servicereview", async (req, res) => {
             const query = {};
-            const cursor = reviewCollection.find(query);
+            const cursor = reviewCollection.find(query).sort({ createdAt: -1 });
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
 
-        app.get("/reviews", async (req, res) => {
-            let query = {};
+        app.get("/reviews", verifyJWT, async (req, res) => {
+            const decoded = req.decoded;
 
+            if (decoded.email !== req.query.email) {
+                res.status(403).send({ message: "unauthorized access" });
+            }
+
+            let query = {};
             if (req?.query?.email) {
                 query = {
                     email: req.query.email,
                 };
             }
 
-            const cursor = reviewCollection.find(query);
+            const cursor = reviewCollection.find(query).sort({ createdAt: -1 });
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
