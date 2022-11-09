@@ -31,10 +31,16 @@ async function run() {
         });
 
         app.get("/services", async (req, res) => {
-            const query = {};
-            const cursor = serviceCollection.find(query);
-            const services = await cursor.toArray();
-            res.send(services);
+            let result = null;
+            if (req?.query?.limit) {
+                result = await serviceCollection
+                    .find({})
+                    .limit(parseInt(req.query.limit))
+                    .toArray();
+            } else {
+                result = await serviceCollection.find({}).toArray();
+            }
+            res.send(result);
         });
 
         app.get("/services/:id", async (req, res) => {
@@ -50,10 +56,17 @@ async function run() {
             res.send(result);
         });
 
+        app.get("/servicereview", async (req, res) => {
+            const query = {};
+            const cursor = reviewCollection.find(query);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
+        });
+
         app.get("/reviews", async (req, res) => {
             let query = {};
 
-            if (req.query.email) {
+            if (req?.query?.email) {
                 query = {
                     email: req.query.email,
                 };
