@@ -20,6 +20,9 @@ async function run() {
         const serviceCollection = client
             .db("photographer")
             .collection("services");
+        const reviewCollection = client
+            .db("photographer")
+            .collection("reviews");
 
         app.post("/service", async (req, res) => {
             const service = req.body;
@@ -39,6 +42,26 @@ async function run() {
             const query = { _id: ObjectId(id) };
             const service = await serviceCollection.findOne(query);
             res.send(service);
+        });
+
+        app.post("/reviews", async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        });
+
+        app.get("/reviews", async (req, res) => {
+            let query = {};
+
+            if (req.query.email) {
+                query = {
+                    email: req.query.email,
+                };
+            }
+
+            const cursor = reviewCollection.find(query);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
         });
     } finally {
     }
