@@ -68,10 +68,14 @@ async function run() {
             if (req?.query?.limit) {
                 result = await serviceCollection
                     .find({})
+                    .sort({ createdAt: -1 })
                     .limit(parseInt(req.query.limit))
                     .toArray();
             } else {
-                result = await serviceCollection.find({}).toArray();
+                result = await serviceCollection
+                    .find({})
+                    .sort({ createdAt: -1 })
+                    .toArray();
             }
             res.send(result);
         });
@@ -92,9 +96,13 @@ async function run() {
             res.send(result);
         });
 
-        app.get("/servicereview", async (req, res) => {
+        app.get("/servicereview/:id", async (req, res) => {
+            const { id } = req.params;
+            console.log(id);
             const query = {};
-            const cursor = reviewCollection.find(query).sort({ createdAt: -1 });
+            const cursor = reviewCollection
+                .find({ service: id })
+                .sort({ createdAt: -1 });
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
